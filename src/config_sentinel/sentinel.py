@@ -61,14 +61,10 @@ class Sentinel(FileSystemEventHandler):
         """
         def merge_instance(cls, values, instance=None):
             if not is_dataclass(cls):
-                self.logger.debug(f"Non-dataclass type encountered: {cls}. Returning value as-is.")
-                return values
+                raise ValueError(f"{cls} is not a valid dataclass.")
 
             if not isinstance(values, dict):
                 raise TypeError(f"Expected a dictionary for dataclass {cls}, got {type(values).__name__}")
-
-            if not hasattr(cls, "__dataclass_fields__"):
-                raise ValueError(f"{cls} is not a valid dataclass.")
 
             field_types = {f.name: f.type for f in cls.__dataclass_fields__.values()}
             if instance is None:
@@ -93,6 +89,9 @@ class Sentinel(FileSystemEventHandler):
                     raise
 
             return instance
+
+        if not is_dataclass(self.config_model):
+            raise ValueError(f"{self.config_model} is not a valid dataclass.")
 
         try:
             self.logger.debug(f"Deserializing with config_model: {self.config_model} and data: {data}")

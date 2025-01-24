@@ -1,6 +1,6 @@
 [project]
 name = "config-sentinel"
-version = "0.1.0"
+version = "0.1.1"
 description = "A Python library for seamless configuration management, supporting JSON, YAML, and TOML formats with real-time file watching, robust validation, and intuitive dot-notation access."
 readme = "README.md"
 authors = [
