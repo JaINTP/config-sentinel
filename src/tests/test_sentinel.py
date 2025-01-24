@@ -114,14 +114,19 @@ def test_sentinel_invalid_key(sentinel_and_handler):
     sentinel, _, _ = sentinel_and_handler
 
     # Test invalid nested key
-    with pytest.raises(KeyError, match="Invalid configuration key: non"):
+    with pytest.raises(KeyError, match=r"Invalid configuration key: non"):
         sentinel.set("non.existent.key", "value")
 
-    # Test intermediate key being None
+    # Set an intermediate key to None
     sentinel.set("user", None)
-    with pytest.raises(KeyError, match="Intermediate key 'user' is None in path: user.username"):
+
+    # Test behavior when accessing a nested key of a None field
+    with pytest.raises(KeyError, match=r"Intermediate key 'user' is None in path: user.username"):
         sentinel.set("user.username", "value")
 
+    # Test invalid field under a valid key
+    with pytest.raises(KeyError, match=r"Intermediate key 'user' is None in path: user.invalid_field"):
+        sentinel.set("user.invalid_field", "value")
 
 
 def test_sentinel_inspect_caller(sentinel_and_handler, caplog):

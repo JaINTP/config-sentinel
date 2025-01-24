@@ -183,13 +183,11 @@ class Sentinel(FileSystemEventHandler):
             if hasattr(config, k):
                 sub_config = getattr(config, k)
                 if sub_config is None:
-                    # Dynamically initialize nested dataclass
-                    field_type = type(config).__dataclass_fields__[k].type
-                    sub_config = field_type()
-                    setattr(config, k, sub_config)
+                    raise KeyError(f"Intermediate key '{k}' is None in path: {key}")
                 config = sub_config
             else:
-                raise KeyError(f"Invalid configuration key: {'.'.join(keys[:keys.index(k) + 1])}")
+                full_key = ".".join(keys[:keys.index(k) + 1])
+                raise KeyError(f"Invalid configuration key: {full_key}")
 
         last_key = keys[-1]
         if hasattr(config, last_key):
