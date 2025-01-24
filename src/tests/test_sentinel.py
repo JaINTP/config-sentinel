@@ -137,3 +137,31 @@ def test_sentinel_inspect_caller(sentinel_and_handler, caplog):
 
     # Verify log output
     assert "Sentinel.set() called by" in caplog.text
+
+
+def test_sentinel_merge_preserves_existing_values(sentinel_and_handler):
+    sentinel, handler, file_path = sentinel_and_handler
+
+    # Initial save with some values
+    sentinel.set("app_name", "InitialApp")
+    sentinel.set("user.username", "existing_user")
+    sentinel.save_config()
+
+    # Modify the config file directly to simulate external updates
+    updated_config = {
+        "app_name": "UpdatedApp",  # This should update
+        "user": {
+            "password": "new_password"  # This should add without overwriting username
+        },
+        "debug": True  # This should add
+    }
+    handler.save(updated_config)
+
+    # Reload configuration
+    sentinel._load_config()
+
+    # Verify the merge behavior
+    assert sentinel.get("app_name") == "UpdatedApp"  # Updated
+    assert sentinel.get("user.username") == "existing_user"  # Preserved
+    assert sentinel.get("user.password") == "new_password"  # Added
+    assert sentinel.get("debug") is True  # Added
