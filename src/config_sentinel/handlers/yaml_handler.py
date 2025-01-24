@@ -1,21 +1,28 @@
 # handlers/yaml_handler.py
-from pathlib import Path
 
 import yaml
+from yaml.parser import ParserError
+from yaml.scanner import ScannerError
 
 from .config_handler import ConfigHandler
 
-class YAMLHandler(ConfigHandler):
-    """
-    YAML file handler implementation of ConfigHandler.
-    """
 
-    def load(self) -> dict:
-        if not self.file_path.exists():
+class YAMLHandler(ConfigHandler):
+    def load(self):
+        try:
+            with open(self.file_path, "r") as f:
+                content = f.read()
+                # Explicitly check if content is non-empty but not valid YAML
+                try:
+                    data = yaml.safe_load(content)
+                    if data is None and content.strip():  # Non-empty but invalid
+                        raise ValueError("Failed to parse configuration: Invalid YAML content.")
+                    return data or {}
+                except yaml.YAMLError as e:
+                    raise ValueError(f"Failed to parse configuration: {e}")
+        except FileNotFoundError:
             return {}
-        with self.file_path.open('r') as f:
-            return yaml.safe_load(f)
 
     def save(self, data: dict):
         with open(self.file_path, "w") as f:
-            yaml.dump(data, f, default_flow_style=False, allow_unicode=True)
+            yaml.safe_dump(data, f)

@@ -165,3 +165,39 @@ def test_sentinel_merge_preserves_existing_values(sentinel_and_handler):
     assert sentinel.get("user.username") == "existing_user"  # Preserved
     assert sentinel.get("user.password") == "new_password"  # Added
     assert sentinel.get("debug") is True  # Added
+
+def test_from_dict_invalid_input(sentinel_and_handler):
+    sentinel, _, _ = sentinel_and_handler
+
+    # Invalid type (non-dict) passed to _from_dict
+    with pytest.raises(TypeError, match="Expected a dictionary for dataclass"):
+        sentinel._from_dict("invalid input")
+
+    # Non-dataclass config model
+    sentinel.config_model = str  # Assign a non-dataclass type
+    with pytest.raises(ValueError, match="is not a valid dataclass"):
+        sentinel._from_dict({})
+
+
+def test_set_invalid_key_handling(sentinel_and_handler):
+    sentinel, _, _ = sentinel_and_handler
+
+    # Test invalid key
+    with pytest.raises(KeyError, match=r"Invalid configuration key: non"):
+        sentinel.set("nonexistent.key", "value")
+
+    # Test intermediate key being None
+    sentinel.set("user", None)
+    with pytest.raises(KeyError, match=r"Intermediate key 'user' is None in path: user.username"):
+        sentinel.set("user.username", "value")
+
+
+def test_stop_watching(sentinel_and_handler, caplog):
+    sentinel, _, _ = sentinel_and_handler
+
+    with caplog.at_level(logging.INFO):
+        # Ensure no exceptions are raised when stopping the observer
+        sentinel.stop_watching()
+
+    # Verify log output
+    assert "Stopping file observer." in caplog.text

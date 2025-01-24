@@ -6,11 +6,15 @@ from .config_handler import ConfigHandler
 
 class JSONHandler(ConfigHandler):
 
-    def load(self) -> dict:
-        if not self.file_path.exists():
+    def load(self):
+        try:
+            with open(self.file_path, "r") as f:
+                return json.load(f)
+        except json.JSONDecodeError as e:
+            raise ValueError(f"Failed to parse configuration: {e}")
+        except FileNotFoundError:
             return {}
-        with open(self.file_path, 'r') as f:
-            return json.load(f)
+
 
     def save(self, data: dict):
         with open(self.file_path, 'w') as f:
