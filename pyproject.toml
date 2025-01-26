@@ -1,6 +1,6 @@
 [project]
 name = "config-sentinel"
-version = "0.1.1"
+version = "0.1.2"
 description = "A Python library for seamless configuration management, supporting JSON, YAML, and TOML formats with real-time file watching, robust validation, and intuitive dot-notation access."
 readme = "README.md"
 authors = [
@@ -33,3 +33,6 @@ omit = [
 
 [tool.pytest.ini_options]
 addopts = "--cov=eventbus --cov-report term-missing"
+
+[tool.setuptools.packages.find]
+where = ["src"]
