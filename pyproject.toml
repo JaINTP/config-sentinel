@@ -32,7 +32,7 @@ omit = [
 ]
 
 [tool.pytest.ini_options]
-addopts = "--cov=eventbus --cov-report term-missing"
+addopts = "--cov=config-sentinel --cov-report term-missing"
 
 [tool.setuptools.packages.find]
 where = ["src"]
