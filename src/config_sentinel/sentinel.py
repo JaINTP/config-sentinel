@@ -279,7 +279,16 @@ class Sentinel(FileSystemEventHandler):
         self._observer.join()
 
     def on_modified(self, event):
-        """Handle file modification events."""
+        """
+        Handle file modification events.
+        
+        Args:
+            event: The file system event that triggered this handler.
+        """
         if event.src_path == str(self.file_path):
-            self.logger.info("Configuration file modified, reloading...")
-            self._load_config()
+            self.logger.debug("Configuration file change detected, attempting reload...")
+            try:
+                self._load_config()
+                self.logger.info("Configuration successfully reloaded")
+            except Exception as e:
+                self.logger.error(f"Failed to reload configuration: {e}")
