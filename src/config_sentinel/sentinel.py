@@ -11,6 +11,7 @@ import inspect
 import logging
 from dataclasses import asdict, is_dataclass
 from pathlib import Path
+from threading import Lock
 from typing import Any, Optional, Type
 
 # Third-party imports
@@ -37,6 +38,7 @@ class Sentinel(FileSystemEventHandler):
         file_path: The path to the configuration file.
         _observer: The file system observer for watching config changes.
         logger: The logger instance for this class.
+        _lock: A lock for thread-safe operations.
     """
 
     _instance = None
@@ -65,10 +67,10 @@ class Sentinel(FileSystemEventHandler):
         self.config_model = config_model
         self.handler = handler
         self.file_path = handler.file_path
+        self.file_path.parent.mkdir(parents=True, exist_ok=True)
         self._observer = Observer()
-
+        self._lock = Lock()
         self._load_config()
-
         self._observer.schedule(self, path=self.file_path.parent, recursive=False)
         self._observer.start()
         self._initialized = True
@@ -77,19 +79,20 @@ class Sentinel(FileSystemEventHandler):
         """
         Load the configuration from file or create default if file is empty/invalid.
         """
-        try:
-            data = self.handler.load()
-            if not data:
-                self.logger.warning(f"Configuration file {self.file_path} is empty. Using defaults.")
+        with self._lock:
+            try:
+                data = self.handler.load()
+                if not data:
+                    self.logger.warning(f"Configuration file {self.file_path} is empty. Using defaults.")
+                    self.configuration = self.config_model()
+                    self.save_config()  # Ensure file creation
+                else:
+                    self.configuration = self._from_dict(data)
+                self.logger.info("Configuration loaded successfully.")
+            except Exception as e:
+                self.logger.error(f"Failed to load configuration: {e}")
                 self.configuration = self.config_model()
-                self.save_config()  # Ensure file creation
-            else:
-                self.configuration = self._from_dict(data)
-            self.logger.info("Configuration loaded successfully.")
-        except Exception as e:
-            self.logger.error(f"Failed to load configuration: {e}")
-            self.configuration = self.config_model()
-            self.save_config()
+                self.save_config()
 
     def _from_dict(self, data: dict) -> Any:
         """
@@ -274,3 +277,9 @@ class Sentinel(FileSystemEventHandler):
         self.logger.info("Stopping file observer.")
         self._observer.stop()
         self._observer.join()
+
+    def on_modified(self, event):
+        """Handle file modification events."""
+        if event.src_path == str(self.file_path):
+            self.logger.info("Configuration file modified, reloading...")
+            self._load_config()
