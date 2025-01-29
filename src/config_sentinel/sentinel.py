@@ -1,27 +1,61 @@
-# sentinel.py
+"""
+A module for managing configuration files with automatic reloading capabilities.
 
+This module provides a singleton class that handles configuration file management,
+including loading, saving, and watching for changes. It supports nested dataclasses
+and provides dot notation access to configuration values.
+"""
+
+# Standard imports
 import inspect
 import logging
 from dataclasses import asdict, is_dataclass
 from pathlib import Path
-from typing import Any, Type, Optional
+from typing import Any, Optional, Type
 
-from watchdog.observers import Observer
+# Third-party imports
 from watchdog.events import FileSystemEventHandler
+from watchdog.observers import Observer
 
-from .handlers import ConfigHandler
+# Local imports
+from config_sentinel.handlers import ConfigHandler
 
 
 class Sentinel(FileSystemEventHandler):
+    """
+    A singleton class that manages configuration files with automatic reloading.
+
+    This class implements the FileSystemEventHandler to watch for file changes and
+    provides methods to load, save, and access configuration values. It supports
+    nested dataclasses and provides dot notation access to configuration values.
+
+    Attributes:
+        _instance: The singleton instance of the class.
+        configuration: The user-defined configuration object.
+        config_model: The dataclass type used for the configuration.
+        handler: The ConfigHandler instance used for file operations.
+        file_path: The path to the configuration file.
+        _observer: The file system observer for watching config changes.
+        logger: The logger instance for this class.
+    """
+
     _instance = None
     configuration: Optional[Any] = None  # Holds the user-defined config object
 
     def __new__(cls, *args, **kwargs):
+        """Create or return the singleton instance of the class."""
         if not cls._instance:
             cls._instance = super(Sentinel, cls).__new__(cls)
         return cls._instance
 
     def __init__(self, config_model: Type[Any], handler: ConfigHandler):
+        """
+        Initialize the Sentinel instance.
+
+        Args:
+            config_model: The dataclass type used for the configuration.
+            handler: The ConfigHandler instance used for file operations.
+        """
         if hasattr(self, "_initialized") and self._initialized:
             return
 
@@ -40,6 +74,9 @@ class Sentinel(FileSystemEventHandler):
         self._initialized = True
 
     def _load_config(self):
+        """
+        Load the configuration from file or create default if file is empty/invalid.
+        """
         try:
             data = self.handler.load()
             if not data:
@@ -57,7 +94,16 @@ class Sentinel(FileSystemEventHandler):
     def _from_dict(self, data: dict) -> Any:
         """
         Merge a dictionary into a user-defined configuration object.
-        Preserves existing values and fills missing fields with defaults.
+
+        Args:
+            data: The dictionary containing configuration values.
+
+        Returns:
+            The merged configuration object.
+
+        Raises:
+            ValueError: If the config_model is not a valid dataclass.
+            TypeError: If the input data is not a dictionary.
         """
         def merge_instance(cls, values, instance=None):
             if not is_dataclass(cls):
@@ -103,14 +149,15 @@ class Sentinel(FileSystemEventHandler):
             raise
 
     def _save_default_config(self):
-        """
-        Save the default configuration to the file.
-        """
+        """Save the default configuration to the file."""
         self.save_config()
 
     def save_config(self):
         """
         Save the current configuration object to the file.
+
+        Raises:
+            Exception: If saving the configuration fails.
         """
         try:
             self.file_path.parent.mkdir(parents=True, exist_ok=True)
@@ -124,13 +171,24 @@ class Sentinel(FileSystemEventHandler):
     def to_dict(self) -> dict:
         """
         Convert the configuration object into a dictionary.
+
+        Returns:
+            A dictionary representation of the configuration.
         """
         return self._to_dict(self.configuration)
 
     def _to_dict(self, obj: Any) -> dict:
         """
         Convert a user-defined configuration object into a dictionary.
-        Handles nested dataclasses and lists.
+
+        Args:
+            obj: The configuration object to convert.
+
+        Returns:
+            A dictionary representation of the object.
+
+        Raises:
+            TypeError: If the object type is not supported.
         """
         def recursive_asdict(o):
             if is_dataclass(o):
@@ -148,6 +206,13 @@ class Sentinel(FileSystemEventHandler):
     def get(self, key: str, default=None) -> Any:
         """
         Retrieve a configuration value using dot notation.
+
+        Args:
+            key: The configuration key in dot notation.
+            default: The default value to return if key doesn't exist.
+
+        Returns:
+            The configuration value or the default value.
         """
         keys = key.split(".")
         value = self.configuration
@@ -161,7 +226,14 @@ class Sentinel(FileSystemEventHandler):
     def set(self, key: str, value: Any, inspect_caller=False):
         """
         Update a configuration value using dot notation and save the configuration.
-        Automatically initializes intermediate `None` keys as needed.
+
+        Args:
+            key: The configuration key in dot notation.
+            value: The value to set.
+            inspect_caller: Whether to log the caller information.
+
+        Raises:
+            KeyError: If the key path is invalid or an intermediate key is None.
         """
         if inspect_caller:
             stack = inspect.stack()
@@ -197,11 +269,8 @@ class Sentinel(FileSystemEventHandler):
         self.save_config()
         self.logger.info(f"Updated configuration key '{key}' to '{value}'.")
 
-
     def stop_watching(self):
-        """
-        Stop the file observer.
-        """
+        """Stop the file observer and join its thread."""
         self.logger.info("Stopping file observer.")
         self._observer.stop()
         self._observer.join()
