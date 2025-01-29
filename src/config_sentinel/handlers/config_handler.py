@@ -8,7 +8,7 @@ configuration data in their specific format.
 
 from abc import ABC, abstractmethod
 from pathlib import Path
-from typing import Union
+from typing import Union, Dict
 
 
 class ConfigHandler(ABC):
@@ -34,12 +34,12 @@ class ConfigHandler(ABC):
         self.file_path = Path(file_path)  # Ensure file_path is a Path object
 
     @abstractmethod
-    def load(self):
+    def load(self) -> Dict:
         """
         Load and parse the configuration from the file.
 
         Returns:
-            dict: The configuration data loaded from the file.
+            Dict: The configuration data loaded from the file.
 
         Raises:
             FileNotFoundError: If the configuration file does not exist.
@@ -48,12 +48,12 @@ class ConfigHandler(ABC):
         pass
 
     @abstractmethod
-    def save(self, data: dict):
+    def save(self, data: Dict) -> None:
         """
         Save the configuration data to the file.
 
         Args:
-            data (dict): The configuration data to save.
+            data (Dict): The configuration data to save.
 
         Raises:
             OSError: If there is an error writing to the file.
