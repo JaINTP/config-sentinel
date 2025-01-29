@@ -57,6 +57,9 @@ class Sentinel(FileSystemEventHandler):
         Args:
             config_model: The dataclass type used for the configuration.
             handler: The ConfigHandler instance used for file operations.
+
+        Raises:
+            OSError: If directory creation fails due to permissions or other OS issues.
         """
         if hasattr(self, "_initialized") and self._initialized:
             return
@@ -67,7 +70,13 @@ class Sentinel(FileSystemEventHandler):
         self.config_model = config_model
         self.handler = handler
         self.file_path = handler.file_path
-        self.file_path.parent.mkdir(parents=True, exist_ok=True)
+        
+        try:
+            self.file_path.parent.mkdir(parents=True, exist_ok=True)
+        except OSError as e:
+            self.logger.error(f"Failed to create directory {self.file_path.parent}: {e}")
+            raise OSError(f"Failed to create configuration directory: {e}") from e
+            
         self._observer = Observer()
         self._lock = Lock()
         self._load_config()
@@ -160,16 +169,23 @@ class Sentinel(FileSystemEventHandler):
         Save the current configuration object to the file.
 
         Raises:
-            Exception: If saving the configuration fails.
+            OSError: If directory creation or file saving fails due to permissions or other OS issues.
+            Exception: If saving the configuration fails for other reasons.
         """
         try:
-            self.file_path.parent.mkdir(parents=True, exist_ok=True)
+            try:
+                self.file_path.parent.mkdir(parents=True, exist_ok=True)
+            except OSError as e:
+                self.logger.error(f"Failed to create directory {self.file_path.parent}: {e}")
+                raise OSError(f"Failed to create configuration directory: {e}") from e
+
             data = self._to_dict(self.configuration)
-            self.logger.debug(f"Serialized configuration: {data}")  # Debug output
+            self.logger.debug(f"Serialized configuration: {data}")
             self.handler.save(data)
             self.logger.info("Configuration saved successfully.")
         except Exception as e:
             self.logger.error(f"Failed to save configuration: {e}")
+            raise
 
     def to_dict(self) -> dict:
         """
