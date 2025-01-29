@@ -6,7 +6,8 @@ It implements the ConfigHandler interface to provide consistent configuration ha
 """
 
 # Standard library imports
-from typing import Dict
+from typing import Any, Dict
+from pathlib import Path
 
 # Third-party imports
 import yaml
@@ -23,6 +24,15 @@ class YAMLHandler(ConfigHandler):
     configuration files. It provides methods to load and save configuration data
     while handling common YAML-related errors.
     """
+
+    def __init__(self, file_path: Path):
+        """
+        Initialize YAML handler.
+        
+        Args:
+            file_path: Path to the YAML configuration file
+        """
+        self.file_path = file_path
 
     def load(self) -> Dict:
         """
@@ -50,7 +60,7 @@ class YAMLHandler(ConfigHandler):
 
     def save(self, data: Dict) -> None:
         """
-        Save configuration data to a YAML file.
+        Save configuration data to a YAML file, overwriting any existing content.
 
         Args:
             data (Dict): The configuration data to save.
@@ -59,5 +69,6 @@ class YAMLHandler(ConfigHandler):
             OSError: If there is an error writing to the file.
             yaml.YAMLError: If the data cannot be serialized to YAML.
         """
+        # Save the configuration, overwriting any existing content
         with open(self.file_path, "w") as f:
             yaml.safe_dump(data, f)
